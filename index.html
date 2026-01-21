@@ -6,26 +6,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: #fff;
-  margin: 0;
-  padding: 10px;
-}
-h1, h2 { text-align: center; }
-.container { max-width: 500px; margin: auto; }
-input, select, button { width: 100%; padding: 10px; margin: 5px 0; font-size: 16px; }
-button { background: #333; color: white; border: none; border-radius: 6px; }
-button:hover { background: #555; }
-.active { background: #e53935 !important; }
-.scoreboard { display: flex; justify-content: space-between; margin: 10px 0; }
-.player { width: 48%; padding: 10px; border: 2px solid #444; border-radius: 8px; }
-.player.active-turn { border-color: #4caf50; }
-.dart-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-.multiplier-buttons { display: flex; gap: 5px; }
-.advice { margin-top: 10px; padding: 10px; background: #222; border-radius: 6px; text-align: center; }
-.history { font-size: 14px; margin-top: 5px; color: #ccc; }
+body { font-family: Arial; background:#111; color:#fff; margin:0; padding:10px; }
+h1,h2 { text-align:center; }
+.container { max-width:500px; margin:auto; }
+input, select, button { width:100%; padding:10px; margin:5px 0; font-size:16px; }
+button { background:#333; color:#fff; border:none; border-radius:6px; }
+button:hover { background:#555; }
+.active { background:#e53935 !important; }
+.scoreboard { display:flex; justify-content:space-between; margin:10px 0; }
+.player { width:48%; padding:10px; border:2px solid #444; border-radius:8px; }
+.player.active-turn { border-color:#4caf50; }
+.dart-buttons { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; margin:10px 0; }
+.multiplier-buttons { display:flex; gap:5px; margin-bottom:10px; }
+.advice { padding:10px; background:#222; border-radius:6px; text-align:center; }
+.history { font-size:14px; margin-top:5px; color:#ccc; }
 </style>
 </head>
 
@@ -106,11 +100,12 @@ button:hover { background: #555; }
 <script>
 let players, currentPlayer, dartsLeft, multiplier, history;
 
+// Standard finish routes
 const finishes = {
-  170:["T20","T20","DB"], 167:["T20","T19","DB"], 164:["T20","T18","DB"],
-  161:["T20","T17","DB"], 160:["T20","T20","D20"], 158:["T20","T20","D19"],
-  100:["T20","D20"], 80:["T20","D10"], 60:["S20","D20"],
-  50:["DB"], 40:["D20"], 32:["D16"], 24:["D12"], 16:["D8"], 8:["D4"], 4:["D2"], 2:["D1"]
+  170:["T20","T20","DB"],167:["T20","T19","DB"],164:["T20","T18","DB"],
+  161:["T20","T17","DB"],160:["T20","T20","D20"],158:["T20","T20","D19"],
+  100:["T20","D20"],80:["T20","D10"],60:["S20","D20"],50:["DB"],
+  40:["D20"],32:["D16"],24:["D12"],16:["D8"],8:["D4"],4:["D2"],2:["D1"]
 };
 
 function startGame(){
@@ -119,14 +114,14 @@ function startGame(){
   const startScoreInput = document.getElementById("startScore");
 
   players = [
-    {name: p1nameInput.value || "Player 1", score: +startScoreInput.value, history:[]},
-    {name: p2nameInput.value || "Player 2", score: +startScoreInput.value, history:[]}
+    {name:p1nameInput.value||"Player 1", score:+startScoreInput.value, history:[]},
+    {name:p2nameInput.value||"Player 2", score:+startScoreInput.value, history:[]}
   ];
 
-  currentPlayer = 0;
-  dartsLeft = 3;
-  multiplier = 1;
-  history = [];
+  currentPlayer=0;
+  dartsLeft=3;
+  multiplier=1;
+  history=[];
 
   document.getElementById("setup").style.display="none";
   document.getElementById("game").style.display="block";
@@ -135,7 +130,7 @@ function startGame(){
 }
 
 function setMultiplier(m){
-  multiplier = m;
+  multiplier=m;
   document.getElementById("singleBtn").classList.remove("active");
   document.getElementById("doubleBtn").classList.remove("active");
   document.getElementById("trebleBtn").classList.remove("active");
@@ -147,40 +142,43 @@ function setMultiplier(m){
 function dart(value){
   if(dartsLeft===0) return;
 
-  let score = value===25?25:value===50?50:value*multiplier;
+  let score = (value===25)?25:(value===50)?50:value*multiplier;
   let p = players[currentPlayer];
 
-  history.push({player:currentPlayer, score:p.score});
+  history.push({player:currentPlayer, score:p.score, multiplier:multiplier, value:value}); 
   p.score -= score;
   p.history.push(format(multiplier,value));
   dartsLeft--;
 
-  setMultiplier(1);
-
-  if(p.score===0 && (value===50 || multiplier===2)){
+  // win if exact 0 and last dart double or bull
+  if(p.score===0 && (multiplier===2 || value===50)){
     alert(p.name+" wins!");
     location.reload();
     return;
   }
 
+  // bust: score<2 or 1 left
   if(p.score<2){
     undo(true);
     return;
   }
 
   if(dartsLeft===0){
-    currentPlayer = 1-currentPlayer;
-    dartsLeft = 3;
+    currentPlayer=1-currentPlayer;
+    dartsLeft=3;
   }
 
+  setMultiplier(1);
   updateUI();
 }
 
 function undo(force=false){
   if(history.length===0) return;
   let last = history.pop();
-  players[last.player].score = last.score;
-  players[last.player].history.pop();
+  let p = players[last.player];
+  p.score = last.score;
+  p.history.pop();
+  multiplier = last.multiplier;
   if(!force) dartsLeft++;
   updateUI();
 }
@@ -201,11 +199,14 @@ function updateUI(){
 function updateAdvice(){
   let score = players[currentPlayer].score;
   let route = finishes[score];
-  if(route && route.length<=dartsLeft){
-    document.getElementById("advice").textContent="Finish: "+route.join(" ");
-  }else if(score<=170){
-    document.getElementById("advice").textContent="No finish — leave a double";
-  }else{
+
+  if(route){
+    // show only the throws you can do this turn
+    let displayRoute = route.slice(0,dartsLeft);
+    document.getElementById("advice").textContent="Finish: " + displayRoute.join(" ");
+  } else if(score<=170){
+    document.getElementById("advice").textContent="No exact finish — aim to leave a double";
+  } else {
     document.getElementById("advice").textContent="Reduce score";
   }
 }
