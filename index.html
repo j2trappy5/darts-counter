@@ -100,7 +100,7 @@ button:hover { background:#555; }
 <script>
 let players, currentPlayer, dartsLeft, multiplier, history;
 
-// Standard finish routes
+// Expanded finish table showing recommended dart per throw
 const finishes = {
   170:["T20","T20","DB"],167:["T20","T19","DB"],164:["T20","T18","DB"],
   161:["T20","T17","DB"],160:["T20","T20","D20"],158:["T20","T20","D19"],
@@ -142,11 +142,11 @@ function setMultiplier(m){
 function dart(value){
   if(dartsLeft===0) return;
 
-  let score = (value===25)?25:(value===50)?50:value*multiplier;
+  let scoreVal = (value===25)?25:(value===50)?50:value*multiplier;
   let p = players[currentPlayer];
 
   history.push({player:currentPlayer, score:p.score, multiplier:multiplier, value:value}); 
-  p.score -= score;
+  p.score -= scoreVal;
   p.history.push(format(multiplier,value));
   dartsLeft--;
 
@@ -196,14 +196,15 @@ function updateUI(){
   updateAdvice();
 }
 
+// Dynamic dart recommendation per throw
 function updateAdvice(){
   let score = players[currentPlayer].score;
   let route = finishes[score];
 
   if(route){
-    // show only the throws you can do this turn
-    let displayRoute = route.slice(0,dartsLeft);
-    document.getElementById("advice").textContent="Finish: " + displayRoute.join(" ");
+    // show next recommended dart only for current throw
+    let nextDart = route[3-dartsLeft] || route[0];
+    document.getElementById("advice").textContent="Next throw: " + nextDart + " (Finish route: " + route.join(" ") + ")";
   } else if(score<=170){
     document.getElementById("advice").textContent="No exact finish — aim to leave a double";
   } else {
