@@ -13,79 +13,19 @@ body {
   margin: 0;
   padding: 10px;
 }
-
-h1, h2 {
-  text-align: center;
-}
-
-.container {
-  max-width: 500px;
-  margin: auto;
-}
-
-input, select, button {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  font-size: 16px;
-}
-
-button {
-  background: #333;
-  color: white;
-  border: none;
-  border-radius: 6px;
-}
-
-button:hover {
-  background: #555;
-}
-
-.active {
-  background: #e53935 !important;
-}
-
-.scoreboard {
-  display: flex;
-  justify-content: space-between;
-  margin: 10px 0;
-}
-
-.player {
-  width: 48%;
-  padding: 10px;
-  border: 2px solid #444;
-  border-radius: 8px;
-}
-
-.player.active-turn {
-  border-color: #4caf50;
-}
-
-.dart-buttons {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 5px;
-}
-
-.multiplier-buttons {
-  display: flex;
-  gap: 5px;
-}
-
-.advice {
-  margin-top: 10px;
-  padding: 10px;
-  background: #222;
-  border-radius: 6px;
-  text-align: center;
-}
-
-.history {
-  font-size: 14px;
-  margin-top: 5px;
-  color: #ccc;
-}
+h1, h2 { text-align: center; }
+.container { max-width: 500px; margin: auto; }
+input, select, button { width: 100%; padding: 10px; margin: 5px 0; font-size: 16px; }
+button { background: #333; color: white; border: none; border-radius: 6px; }
+button:hover { background: #555; }
+.active { background: #e53935 !important; }
+.scoreboard { display: flex; justify-content: space-between; margin: 10px 0; }
+.player { width: 48%; padding: 10px; border: 2px solid #444; border-radius: 8px; }
+.player.active-turn { border-color: #4caf50; }
+.dart-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.multiplier-buttons { display: flex; gap: 5px; }
+.advice { margin-top: 10px; padding: 10px; background: #222; border-radius: 6px; text-align: center; }
+.history { font-size: 14px; margin-top: 5px; color: #ccc; }
 </style>
 </head>
 
@@ -112,4 +52,172 @@ button:hover {
   <div class="player" id="p1box">
     <h2 id="p1label"></h2>
     <div>Score: <span id="p1score"></span></div>
-    <div class="history" id="p1
+    <div class="history" id="p1history"></div>
+  </div>
+
+  <div class="player" id="p2box">
+    <h2 id="p2label"></h2>
+    <div>Score: <span id="p2score"></span></div>
+    <div class="history" id="p2history"></div>
+  </div>
+</div>
+
+<h2 id="turnLabel"></h2>
+
+<div class="multiplier-buttons">
+  <button id="singleBtn" class="active" onclick="setMultiplier(1)">Single</button>
+  <button id="doubleBtn" onclick="setMultiplier(2)">Double</button>
+  <button id="trebleBtn" onclick="setMultiplier(3)">Treble</button>
+</div>
+
+<div class="dart-buttons">
+  <button onclick="dart(25)">25</button>
+  <button onclick="dart(50)">Bull</button>
+  <button onclick="dart(0)">Miss</button>
+  <button onclick="dart(1)">1</button>
+  <button onclick="dart(2)">2</button>
+  <button onclick="dart(3)">3</button>
+  <button onclick="dart(4)">4</button>
+  <button onclick="dart(5)">5</button>
+  <button onclick="dart(6)">6</button>
+  <button onclick="dart(7)">7</button>
+  <button onclick="dart(8)">8</button>
+  <button onclick="dart(9)">9</button>
+  <button onclick="dart(10)">10</button>
+  <button onclick="dart(11)">11</button>
+  <button onclick="dart(12)">12</button>
+  <button onclick="dart(13)">13</button>
+  <button onclick="dart(14)">14</button>
+  <button onclick="dart(15)">15</button>
+  <button onclick="dart(16)">16</button>
+  <button onclick="dart(17)">17</button>
+  <button onclick="dart(18)">18</button>
+  <button onclick="dart(19)">19</button>
+  <button onclick="dart(20)">20</button>
+</div>
+
+<button onclick="undo()">Undo last dart</button>
+
+<div class="advice" id="advice"></div>
+
+</div>
+</div>
+
+<script>
+let players, currentPlayer, dartsLeft, multiplier, history;
+
+const finishes = {
+  170:["T20","T20","DB"], 167:["T20","T19","DB"], 164:["T20","T18","DB"],
+  161:["T20","T17","DB"], 160:["T20","T20","D20"], 158:["T20","T20","D19"],
+  100:["T20","D20"], 80:["T20","D10"], 60:["S20","D20"],
+  50:["DB"], 40:["D20"], 32:["D16"], 24:["D12"], 16:["D8"], 8:["D4"], 4:["D2"], 2:["D1"]
+};
+
+function startGame(){
+  const p1nameInput = document.getElementById("p1name");
+  const p2nameInput = document.getElementById("p2name");
+  const startScoreInput = document.getElementById("startScore");
+
+  players = [
+    {name: p1nameInput.value || "Player 1", score: +startScoreInput.value, history:[]},
+    {name: p2nameInput.value || "Player 2", score: +startScoreInput.value, history:[]}
+  ];
+
+  currentPlayer = 0;
+  dartsLeft = 3;
+  multiplier = 1;
+  history = [];
+
+  document.getElementById("setup").style.display="none";
+  document.getElementById("game").style.display="block";
+
+  updateUI();
+}
+
+function setMultiplier(m){
+  multiplier = m;
+  document.getElementById("singleBtn").classList.remove("active");
+  document.getElementById("doubleBtn").classList.remove("active");
+  document.getElementById("trebleBtn").classList.remove("active");
+  if(m===1) document.getElementById("singleBtn").classList.add("active");
+  if(m===2) document.getElementById("doubleBtn").classList.add("active");
+  if(m===3) document.getElementById("trebleBtn").classList.add("active");
+}
+
+function dart(value){
+  if(dartsLeft===0) return;
+
+  let score = value===25?25:value===50?50:value*multiplier;
+  let p = players[currentPlayer];
+
+  history.push({player:currentPlayer, score:p.score});
+  p.score -= score;
+  p.history.push(format(multiplier,value));
+  dartsLeft--;
+
+  setMultiplier(1);
+
+  if(p.score===0 && (value===50 || multiplier===2)){
+    alert(p.name+" wins!");
+    location.reload();
+    return;
+  }
+
+  if(p.score<2){
+    undo(true);
+    return;
+  }
+
+  if(dartsLeft===0){
+    currentPlayer = 1-currentPlayer;
+    dartsLeft = 3;
+  }
+
+  updateUI();
+}
+
+function undo(force=false){
+  if(history.length===0) return;
+  let last = history.pop();
+  players[last.player].score = last.score;
+  players[last.player].history.pop();
+  if(!force) dartsLeft++;
+  updateUI();
+}
+
+function updateUI(){
+  document.getElementById("p1label").textContent=players[0].name;
+  document.getElementById("p2label").textContent=players[1].name;
+  document.getElementById("p1score").textContent=players[0].score;
+  document.getElementById("p2score").textContent=players[1].score;
+  document.getElementById("p1history").textContent=players[0].history.join(" ");
+  document.getElementById("p2history").textContent=players[1].history.join(" ");
+  document.getElementById("p1box").classList.toggle("active-turn",currentPlayer===0);
+  document.getElementById("p2box").classList.toggle("active-turn",currentPlayer===1);
+  document.getElementById("turnLabel").textContent=players[currentPlayer].name+"'s turn ("+dartsLeft+" darts left)";
+  updateAdvice();
+}
+
+function updateAdvice(){
+  let score = players[currentPlayer].score;
+  let route = finishes[score];
+  if(route && route.length<=dartsLeft){
+    document.getElementById("advice").textContent="Finish: "+route.join(" ");
+  }else if(score<=170){
+    document.getElementById("advice").textContent="No finish — leave a double";
+  }else{
+    document.getElementById("advice").textContent="Reduce score";
+  }
+}
+
+function format(m,v){
+  if(v===50) return "DB";
+  if(v===25) return "SB";
+  if(m===2) return "D"+v;
+  if(m===3) return "T"+v;
+  return "S"+v;
+}
+</script>
+
+</body>
+</html>
