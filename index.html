@@ -98,7 +98,7 @@ button:hover { background:#555; }
 </div>
 
 <script>
-let players, currentPlayer, dartsLeft, multiplier, history;
+let players, currentPlayer, dartsLeft, multiplier, history, turnStartScore;
 
 // Expanded finish table showing recommended dart per throw
 const finishes = {
@@ -122,6 +122,7 @@ function startGame(){
   dartsLeft=3;
   multiplier=1;
   history=[];
+  turnStartScore = players[currentPlayer].score;
 
   document.getElementById("setup").style.display="none";
   document.getElementById("game").style.display="block";
@@ -157,29 +158,44 @@ function dart(value){
     return;
   }
 
-  // bust: score<2 or 1 left
-  if(p.score<2){
-    undo(true);
+  // Bust: score < 2 or 1 left
+  if(p.score < 2){
+    // reset score to start of turn
+    p.score = turnStartScore;
+    // remove all darts of this turn from history
+    while(history.length > 0 && history[history.length-1].player === currentPlayer){
+      history.pop();
+      p.history.pop();
+    }
+    // switch player
+    currentPlayer = 1 - currentPlayer;
+    dartsLeft = 3;
+    multiplier = 1;
+    turnStartScore = players[currentPlayer].score;
+    updateUI();
     return;
   }
 
+  // turn ends normally after 3 darts
   if(dartsLeft===0){
     currentPlayer=1-currentPlayer;
     dartsLeft=3;
+    turnStartScore = players[currentPlayer].score;
   }
 
   setMultiplier(1);
   updateUI();
 }
 
-function undo(force=false){
+function undo(){
   if(history.length===0) return;
   let last = history.pop();
   let p = players[last.player];
   p.score = last.score;
   p.history.pop();
   multiplier = last.multiplier;
-  if(!force) dartsLeft++;
+  dartsLeft++;
+  turnStartScore = p.score - last.value*last.multiplier; // recalc turn start if needed
   updateUI();
 }
 
