@@ -6,10 +6,13 @@
   <title>Darts Calculator (2 Players)</title>
   <style>
     body { font-family: Arial, sans-serif; background:#111; color:#fff; text-align:center; padding:20px; }
-    button { margin:4px; padding:10px; font-size:16px; }
+    button { margin:5px; padding:12px 16px; font-size:16px; cursor:pointer; border-radius:6px; border:none; }
+    button:active { transform: scale(0.95); background:#444; }
     .player { margin:10px 0; font-size:20px; }
-    .active { color:#0f0; }
-    .finish { font-size:16px; color:#0f0; }
+    .active { color:#0f0; font-weight:bold; }
+    .finish { font-size:18px; color:#0f0; margin-top:10px; }
+    .board button { width:56px; }
+    input { padding:8px; font-size:16px; margin:5px; }
   </style>
 </head>
 <body>
@@ -17,14 +20,19 @@
 <h1>Darts Calculator</h1>
 
 <div id="setup">
+  <p>Player names:</p>
+  <input id="name1" placeholder="Player 1 name">
+  <input id="name2" placeholder="Player 2 name">
+
   <p>Select game:</p>
   <button onclick="startGame(301)">301</button>
   <button onclick="startGame(501)">501</button>
 </div>
 
 <div id="game" style="display:none;">
-  <div id="p1" class="player active"></div>
+  <div id="p1" class="player"></div>
   <div id="p2" class="player"></div>
+
   <div id="finish" class="finish"></div>
 
   <p>Multiplier:</p>
@@ -33,7 +41,7 @@
   <button onclick="setMult(3)">Treble</button>
 
   <p>Board:</p>
-  <div>
+  <div class="board">
     <script>
       for (let i = 1; i <= 20; i++) {
         document.write(`<button onclick=\"throwDart(${i})\">${i}</button>`);
@@ -44,21 +52,37 @@
     <button onclick="throwBull(50)">Bull</button>
   </div>
 
-  <p id="turnInfo">Darts left: 3</p>
+  <p id="turnInfo"></p>
+  <button onclick="undoLast()">Undo last dart</button>
 </div>
 
 <script>
 let scores = [0, 0];
+let names = ["Player 1", "Player 2"];
 let currentPlayer = 0;
 let dartsLeft = 3;
 let multiplier = 1;
+let history = [];
+let startScore = 501;
 
 function startGame(start) {
+  startScore = start;
+  names[0] = document.getElementById('name1').value || 'Player 1';
+  names[1] = document.getElementById('name2').value || 'Player 2';
   scores = [start, start];
   currentPlayer = 0;
   dartsLeft = 3;
+  history = [];
   document.getElementById('setup').style.display = 'none';
   document.getElementById('game').style.display = 'block';
+  update();
+}
+
+function resetGame() {
+  scores = [startScore, startScore];
+  currentPlayer = 0;
+  dartsLeft = 3;
+  history = [];
   update();
 }
 
@@ -76,14 +100,11 @@ function throwBull(val) {
 function applyScore(points) {
   if (dartsLeft === 0) return;
 
+  history.push({ scores: [...scores], player: currentPlayer, darts: dartsLeft });
+
   let newScore = scores[currentPlayer] - points;
 
-  if (newScore < 0 || newScore === 1) {
-    endTurn();
-    return;
-  }
-
-  if (newScore === 0 && points % 2 !== 0) {
+  if (newScore < 0 || newScore === 1 || (newScore === 0 && points % 2 !== 0)) {
     endTurn();
     return;
   }
@@ -92,7 +113,8 @@ function applyScore(points) {
   dartsLeft--;
 
   if (scores[currentPlayer] === 0) {
-    alert(`Player ${currentPlayer + 1} wins!`);
+    alert(names[currentPlayer] + ' wins!');
+    resetGame();
     return;
   }
 
@@ -106,30 +128,94 @@ function endTurn() {
   update();
 }
 
+function undoLast() {
+  if (history.length === 0) return;
+  let last = history.pop();
+  scores = last.scores;
+  currentPlayer = last.player;
+  dartsLeft = last.darts;
+  update();
+}
+
 function update() {
-  document.getElementById('p1').innerText = `Player 1: ${scores[0]}`;
-  document.getElementById('p2').innerText = `Player 2: ${scores[1]}`;
+  document.getElementById('p1').innerText = `${names[0]}: ${scores[0]}`;
+  document.getElementById('p2').innerText = `${names[1]}: ${scores[1]}`;
 
   document.getElementById('p1').classList.toggle('active', currentPlayer === 0);
   document.getElementById('p2').classList.toggle('active', currentPlayer === 1);
 
-  document.getElementById('turnInfo').innerText = `Darts left: ${dartsLeft}`;
+  document.getElementById('turnInfo').innerText = `${names[currentPlayer]}'s turn — darts left: ${dartsLeft}`;
   document.getElementById('finish').innerText = getFinish(scores[currentPlayer]);
 }
 
 function getFinish(s) {
-  if (s > 170) return '';
-  if (s === 170) return 'Finish: T20 T20 Bull';
-  if (s === 167) return 'Finish: T20 T19 Bull';
-  if (s === 160) return 'Finish: T20 T20 D20';
-  if (s === 40) return 'Finish: D20';
-  if (s === 32) return 'Finish: D16';
-  if (s === 24) return 'Finish: D12';
-  if (s === 16) return 'Finish: D8';
-  if (s === 8) return 'Finish: D4';
-  if (s === 4) return 'Finish: D2';
-  if (s === 2) return 'Finish: D1';
-  return 'Finish possible';
+  const finishes = {
+    170: 'T20 T20 Bull',
+    167: 'T20 T19 Bull',
+    164: 'T20 T18 Bull',
+    161: 'T20 T17 Bull',
+    160: 'T20 T20 D20',
+    158: 'T20 T20 D19',
+    157: 'T20 T19 D20',
+    156: 'T20 T20 D18',
+    155: 'T20 T19 D19',
+    154: 'T20 T18 D20',
+    153: 'T20 T19 D18',
+    152: 'T20 T20 D16',
+    151: 'T20 T17 D20',
+    150: 'T20 T18 D18',
+    149: 'T20 T19 D16',
+    148: 'T20 T16 D20',
+    147: 'T20 T17 D18',
+    146: 'T20 T18 D16',
+    145: 'T20 T15 D20',
+    144: 'T20 T20 D12',
+    143: 'T20 T17 D16',
+    142: 'T20 T14 D20',
+    141: 'T20 T19 D12',
+    140: 'T20 T20 D10',
+    139: 'T20 T13 D20',
+    138: 'T20 T18 D12',
+    137: 'T20 T19 D10',
+    136: 'T20 T20 D8',
+    135: 'T20 T17 D12',
+    134: 'T20 T14 D16',
+    133: 'T20 T19 D8',
+    132: 'T20 T20 D6',
+    131: 'T20 T13 D16',
+    130: 'T20 T20 D5',
+    129: 'T19 T20 D6',
+    128: 'T18 T14 D16',
+    127: 'T20 T17 D8',
+    126: 'T19 T19 D6',
+    125: '25 T20 D20',
+    124: 'T20 T16 D8',
+    123: 'T19 T16 D9',
+    122: 'T18 T20 D4',
+    121: 'T20 T11 D14',
+    120: 'T20 S20 D20',
+    100: 'T20 D20',
+    80: 'T20 D10',
+    60: '20 D20',
+    50: '10 D20',
+    40: 'D20',
+    32: 'D16',
+    24: 'D12',
+    16: 'D8',
+    8: 'D4',
+    4: 'D2',
+    2: 'D1'
+  };
+
+  if (finishes[s]) return 'Finish: ' + finishes[s];
+
+  if (s > 170) return 'Recommended: score down towards T20';
+
+  if (s % 2 === 1) return 'Recommended: set up a double (leave even)';
+
+  if (s <= 40) return 'Recommended: leave D' + (s / 2);
+
+  return 'Recommended: aim T20 to leave a finish';
 }
 </script>
 
